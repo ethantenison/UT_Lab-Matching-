@@ -1,0 +1,54 @@
+---
+title: "measure_impact_research_labs"
+author: "Ethan Tenison"
+date: "5/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(dplyr)
+library(Matching)
+
+
+df <- read_csv("cleaned_ut_census_tea.csv", 
+    col_types = cols(Time_Period = col_skip()))
+  
+```
+
+
+```{r modifiying_gpa_mock}
+
+
+df$cumulative_gpa <- df$cumulative_gpa + ifelse(df$mock_treatment == 1, runif(1, 0, 0.5), 0)
+
+```
+
+
+
+
+
+
+```{r propensity_score_matching}
+
+Y <- df$cumulative_gpa
+Tr <- df$mock_treatment
+
+
+glm1 <- glm(Tr ~ citizenship + gender + ethnicities + hs_rank + c_rating + city_size, family=binomial, data = df)
+
+# By default Match does 1-to-1 matching with replacement and estimates average treatment effect (ATT)
+rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
+```
+
+
+
+```{r MatchBalance}
+
+ MatchBalance(Tr ~ age +citizenship + gender + ethnicities + hs_rank + c_rating + city_size , match.out = rr1, nboots = 1000, data = df)
+
+
+
+
+
+```
