@@ -9,6 +9,7 @@ output: html_document
 library(readr)
 library(dplyr)
 library(Matching)
+library(rbounds)
 
 
 df <- read_csv("cleaned_ut_census_tea.csv", 
@@ -20,11 +21,9 @@ df <- read_csv("cleaned_ut_census_tea.csv",
 ```{r modifiying_gpa_mock}
 
 
-df$cumulative_gpa <- df$cumulative_gpa + ifelse(df$mock_treatment == 1, runif(1, 0, 0.5), 0)
+df$cumulative_gpa <- df$cumulative_gpa + ifelse(df$mock_treatment == 1, runif(1, 0, 1), 0)
 
 ```
-
-
 
 
 
@@ -35,10 +34,21 @@ Y <- df$cumulative_gpa
 Tr <- df$mock_treatment
 
 
-glm1 <- glm(Tr ~ citizenship + gender + ethnicities + hs_rank + c_rating + city_size, family=binomial, data = df)
+glm1 <- glm(Tr ~ age + citizenship + gender + ethnicities + hs_rank + c_rating + city_size, family=binomial, data = df)
 
 # By default Match does 1-to-1 matching with replacement and estimates average treatment effect (ATT)
 rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
+
+summary(rr1)
+```
+
+
+```{r qqplot}
+qqplot(df$cumulative_gpa[rr1$index.control], df$cumulative_gpa[rr1$index.treated])
+abline(coef = c(0, 1), col = 2)
+
+
+
 ```
 
 
@@ -48,7 +58,14 @@ rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
  MatchBalance(Tr ~ age +citizenship + gender + ethnicities + hs_rank + c_rating + city_size , match.out = rr1, nboots = 1000, data = df)
 
 
+```
 
+
+
+```{r sensitivity_test}
+
+psens(rr1, Gamma=1.7, GammaInc=.05)
+hlsens(rr1, Gamma=1.7, GammaInc=.05, .1)
 
 
 ```
