@@ -1,0 +1,32 @@
+---
+title: "year_to_yearcleaning"
+output: html_document
+---
+
+```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(readxl)
+```
+
+## Creating one data set from semester data
+
+```{r UT Data}
+
+files = list.files(path = "C:/Users/tenis/OneDrive/Desktop/Data_Projects/UT_Lab-Matching/data/raw", pattern = "*.xlsxdf",full.names = TRUE)
+
+#Removing the semesters that are not complete
+files = files[-c(1:3,14:16)]
+
+#Test to set up the algorithm 
+Fall_2016_C1_2 <- read_excel("data/raw/COLA Toolkit, Fall 2016, C1-2.xlsx")
+Fall_2016_C3_4 <- read_excel("data/raw/COLA Toolkit, Fall 2016, C3-4.xlsx")
+test <- left_join(Fall_2016_C1_2, Fall_2016_C3_4, by = "EID", keep = FALSE)
+test_new <- test %>% select(-contains(".y"))
+columns <- colnames(test_new)
+columns <- gsub(".x", "", columns)
+`
+``
+
+## 
