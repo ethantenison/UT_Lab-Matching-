@@ -1,0 +1,42 @@
+---
+title: "Setting Up Matching Dataset"
+output: html_document
+---
+
+## LOVING the Visual Studio
+
+```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(readxl)
+library(janitor)
+```
+
+```{r data_read, message=FALSE, warning=FALSE}
+
+COLA_df <- read_csv("data/interim/COLA_registrar_total.csv")
+COLA_df <- clean_names(COLA_df)
+
+RA_df <- read_csv("data/raw/Research Affiliates by Year.csv")
+RA_df <- clean_names(RA_df)
+
+
+```
+
+**I have emails for Fall 2020 which should be easier to match with the registrar data**
+
+```{r assign_ipd_2020}
+
+
+COLA_df_2020 <-
+  COLA_df %>% filter(semester == "Fall 2020") %>% select(name, email)
+
+RA_df_2020 <-
+  RA_df %>% filter(semester == "Fall" &
+                     year == 2020) %>% filter(degree_type != "Graduate")
+
+merged <- left_join(RA_df_2020, COLA_df_2020, by = "email")
+
+
+```

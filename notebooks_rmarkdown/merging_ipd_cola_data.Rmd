@@ -1,0 +1,48 @@
+---
+title: "Merging COLA and IPD Data"
+output: html_notebook
+---
+
+```{r setup}
+    knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
+
+
+```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(readxl)
+library(janitor)
+```
+
+
+```{r read_data, message=TRUE, warning=TRUE, include=FALSE}
+
+
+cola_raw <- read_csv("data/interim/COLA_registrar_total.csv")
+
+ipd_raw <- read_csv("data/raw/Research Affiliates by Year.csv")
+
+```
+
+```{r getting_eids}
+
+cola <- clean_names(cola_raw)
+cola <- select(cola, name, eid, sch_maj1, sch_maj2, email)
+
+#Checking to see if there are any duplicates 
+cola <- cola[!duplicated(cola[c(2,5)]),]
+
+ipd <- clean_names(ipd_raw)
+
+merged <- left_join(ipd, cola, by = "email")
+
+cola$cola_names_filtered <- gsub("\\s*\\w*$", "", cola$name)
+
+cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$cola_names_filtered)
+
+merged2 <-left_join(ipd, cola, by = c("name" = "cola_names_filtered"))
+
+```

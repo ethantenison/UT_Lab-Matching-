@@ -12,21 +12,93 @@ library(readxl)
 
 ## Creating one data set from semester data
 
-```{r UT Data}
+```{r UT_Data}
 
-files = list.files(path = "C:/Users/tenis/OneDrive/Desktop/Data_Projects/UT_Lab-Matching/data/raw", pattern = "*.xlsxdf",full.names = TRUE)
+files = list.files(path = "C:/Users/tenis/OneDrive/Desktop/Data_Projects/UT_Lab-Matching/data/raw",
+                   pattern = "*.xlsx",
+                   full.names = TRUE)
 
 #Removing the semesters that are not complete
-files = files[-c(1:3,14:16)]
+files = files[-c(1:3, 14:16)]
+print(files)
 
-#Test to set up the algorithm 
-Fall_2016_C1_2 <- read_excel("data/raw/COLA Toolkit, Fall 2016, C1-2.xlsx")
-Fall_2016_C3_4 <- read_excel("data/raw/COLA Toolkit, Fall 2016, C3-4.xlsx")
-test <- left_join(Fall_2016_C1_2, Fall_2016_C3_4, by = "EID", keep = FALSE)
-test_new <- test %>% select(-contains(".y"))
-columns <- colnames(test_new)
-columns <- gsub(".x", "", columns)
-`
-``
 
-## 
+```
+
+**Function to clean the data one semester at a time**
+
+```{r function, message = FALSE, warning = FALSE}
+
+#creating function to make it quick and painless
+utdata <- function(file1, file2, semester_year) {
+  one <- read_excel(file1)
+  two <- read_excel(file2)
+  joined <-
+    left_join(one,
+              two,
+              by = "EID",
+              keep = FALSE)
+
+  joined_new <- joined %>% select(-contains(".y"))
+  columns <- colnames(joined_new)
+  columns <- gsub(".x", "", columns)
+  colnames(joined_new) <- columns
+  joined_new <- mutate(joined_new, semester = semester_year)
+  joined_new <- mutate_all(joined_new, as.character)
+  #fixing columns names that have year identifiers in them
+  colnames(joined_new)[4] <- "Academic Status" 
+  colnames(joined_new)[24] <- "Sem GPA Hrs w/o CBE .semester. unavailable if current ccyys" 
+  colnames(joined_new)[25] <- "Certificates Sought Note (before .semester.)"
+  colnames(joined_new)[29] <- "Semester Hrs Passed .semester. unavailable if current ccyys"
+  colnames(joined_new)[30] <- "Prob-Dism, Begin of .semester." 
+  colnames(joined_new)[37] <- "Minors/CertsPursuing(after .semester.)" 
+  colnames(joined_new)[38] <- "Minors/CertsApproved(after .semester.)"
+  colnames(joined_new)[69] <- "Sem GPA .semester. unavailable if current ccyys"
+  colnames(joined_new)[70] <- "Sem GPA Hrs .semester. unavailable if current ccyys"
+  colnames(joined_new)[71] <- "Semester Hrs Failed .semester. unavailable if current ccyys" 
+  colnames(joined_new)[72] <- "Semester Hrs Incomplete .semester. unavailable if current ccyys" 
+  colnames(joined_new)[76] <- "Minors/Certs Awarded(after .semester)" 
+
+  return(joined_new)
+}
+```
+
+**Reading in the yearly data**
+
+```{r all_years, message=FALSE, warning=FALSE}
+
+
+fall2016 <- utdata(files[1], files[2], "Fall 2016")
+fall2017 <- utdata(files[3], files[4], "Fall 2017")
+fall2018 <- utdata(files[5], files[6], "Fall 2018")
+fall2019 <- utdata(files[7], files[8], "Fall 2019")
+fall2020 <- utdata(files[9], files[10], "Fall 2020")
+
+spring2016 <- utdata(files[11], files[12], "Spring 2016")
+spring2017 <- utdata(files[13], files[14], "Spring 2017")
+spring2018 <- utdata(files[15], files[16], "Spring 2018")
+spring2019 <- utdata(files[17], files[18], "Spring 2019")
+spring2020 <- utdata(files[19], files[20], "Spring 2020")
+
+ut_registrar <- bind_rows(
+  list(
+    fall2016,
+    fall2017,
+    fall2018,
+    fall2019,
+    fall2020,
+    spring2016,
+    spring2017,
+    spring2018,
+    spring2019,
+    spring2020
+    
+  )
+)
+
+```
+
+```{r saving}
+
+write.csv(ut_registrar, "C:/Users/tenis/OneDrive/Desktop/Data_Projects/UT_Lab-Matching/data/interim/COLA_registrar_total.csv")
+```
