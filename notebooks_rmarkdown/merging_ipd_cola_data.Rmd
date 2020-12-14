@@ -46,3 +46,21 @@ cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$cola_names_fi
 merged2 <-left_join(ipd, cola, by = c("name" = "cola_names_filtered"))
 
 ```
+
+
+```{r colaonly}
+cola <- clean_names(cola_raw)
+cola <- select(cola,name, eid, sch_maj1, sch_maj2)
+cola <- cola[!duplicated(cola[c(2)]),]
+cola$cola_names_filtered <- gsub("\\s*\\w*$", "", cola$name)
+cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$cola_names_filtered)
+cola <- cola[,-1]
+
+ipd_cola_only <- read_csv("data/interim/ipd_cola_only.csv")
+ipd_cola_only <- ipd_cola_only[1:556,]
+ipd_cola_only <- clean_names(ipd_cola_only)
+
+merged3 <- left_join(ipd_cola_only, cola, by = c("name" = "cola_names_filtered"))
+merged3 <- select(merged3, name,department_school_major,year, eid)
+
+```
