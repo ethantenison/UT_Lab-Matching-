@@ -7,7 +7,7 @@ output: html_notebook
     knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
 ```
 
-
+**Libraries**
 
 ```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
 
@@ -17,6 +17,7 @@ library(readxl)
 library(janitor)
 ```
 
+**Raw Data**
 
 ```{r read_data, message=TRUE, warning=TRUE, include=FALSE}
 
@@ -27,31 +28,44 @@ ipd_raw <- read_csv("data/raw/Research Affiliates by Year.csv")
 
 ```
 
+**Finding EIDs for IPD Students**
+
+-   In order to run any analysis, you need a unique identifier. The data from IPD contains names, but the UT database contains only official full names, which include middles names, and it is very irregular.
+
 ```{r getting_eids}
 
 cola <- clean_names(cola_raw)
 cola <- select(cola, name, eid, sch_maj1, sch_maj2, email)
 
-#Checking to see if there are any duplicates 
+#Removing Duplicates
 cola <- cola[!duplicated(cola[c(2,5)]),]
 
 ipd <- clean_names(ipd_raw)
 
+#Merging just on email that was provided only for 2020
 merged <- left_join(ipd, cola, by = "email")
 
+#Removing middle names if included 
 cola$cola_names_filtered <- gsub("\\s*\\w*$", "", cola$name)
 
+#Changing the order of names for joining purposes 
 cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$cola_names_filtered)
 
 merged2 <-left_join(ipd, cola, by = c("name" = "cola_names_filtered"))
 
 ```
 
+**IPD Data with Cola ONLY students**
 
-```{r colaonly}
+-   This stage involved manually removing students that are not undergraduate in COLA. There were too many of them to do it in a programmatic way, but in subsequent IPD surveys EIDs will be collected
+
+```{r colaonly, message=FALSE, warning=FALSE}
 cola <- clean_names(cola_raw)
-cola <- select(cola,name, eid, sch_maj1, sch_maj2)
+cola <- select(cola,name, eid, ut_abbr1, sch_maj1, sch_maj2)
 cola <- cola[!duplicated(cola[c(2)]),]
+#writing csv of COLA database with duplicates of EIDs removed
+#write.csv(cola,"data/interim/COLA_duplicates_removed.csv" )
+
 cola$cola_names_filtered <- gsub("\\s*\\w*$", "", cola$name)
 cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$cola_names_filtered)
 cola <- cola[,-1]
@@ -62,5 +76,65 @@ ipd_cola_only <- clean_names(ipd_cola_only)
 
 merged3 <- left_join(ipd_cola_only, cola, by = c("name" = "cola_names_filtered"))
 merged3 <- select(merged3, name,department_school_major,year, eid)
+
+write.csv(merged3,"data/interim/name_matched_data_missing_some.csv" )
+
+```
+
+**This pulls the eid for those that do not have middle names**
+
+```{r thosethatweremissed, message=FALSE, warning=FALSE}
+
+missed <- merged3
+missed_list <- is.na(missed$eid)
+missed <- missed[missed_list,]
+missed <- missed[,-4]
+
+cola <- clean_names(cola_raw)
+cola <- select(cola,name, eid, ut_abbr1, sch_maj1, sch_maj2)
+cola <- cola[!duplicated(cola[c(2)]),]
+cola$cola_names_filtered <- sub("(\\w+),\\s(\\w+)","\\2 \\1", cola$name)
+
+ipd_cola_only <- read_csv("data/interim/ipd_cola_only.csv")
+ipd_cola_only <- ipd_cola_only[1:556,]
+ipd_cola_only <- clean_names(ipd_cola_only)
+
+merged4 <- left_join(missed, cola, by = c("name" = "cola_names_filtered"))
+merged4 <- select(merged4, name,department_school_major,year, eid)
+
+
+
+
+```
+
+**Even after these last two cells, a significant number still do not have eids**
+
+```{r noeids, message=FALSE, warning=FALSE}
+
+missed2 <- merged4
+missed_list2 <- is.na(missed2$eid)
+missed2 <- missed2[missed_list2,]
+write.csv(missed2,"data/interim/COLA_duplicates_removed_nomatchwithdatabase.csv" )
+
+```
+
+**Merging all of the IPD EID files together after all of the different methods**
+
+```{r grand_merge, message=FALSE, warning=FALSE}
+
+
+
+from_1st_match <- !is.na(merged3$eid)
+from_1st_match <- merged3[from_1st_match,]
+from_2nd_match <- !is.na(merged4$eid)
+from_2nd_match <- merged4[from_2nd_match,]
+from_3rd_match <-
+  read_csv("data/interim/COLA_duplicates_removed_nomatchwithdatabase_eids_assigned.csv")
+from_3rd_match2 <- !is.na(from_3rd_match$eid)
+from_3rd_match <- from_3rd_match[from_3rd_match2,]
+
+IPD_eid_list <- bind_rows(from_1st_match, from_2nd_match, from_3rd_match)
+
+write.csv(IPD_eid_list,"data/interim/IPD_eid_list_minus2015.csv")
 
 ```
