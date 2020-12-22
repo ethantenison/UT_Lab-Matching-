@@ -1,0 +1,31 @@
+---
+title: "simple_matching_diffndiff"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
+## Simple Matching and Diff n Diff
+
+Because there are so many different time period, I'm going to break up the evaluation down to simple parts
+
+```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(readxl)
+library(janitor)
+```
+
+## IPD Data 
+
+```{r ipd, message=TRUE, warning=TRUE, include=FALSE}
+
+ipd_raw <-
+  read_csv("data/interim/IPD_eid_list_minus2015.csv",
+           col_types = cols(X1 = col_skip()))
+
+
+```

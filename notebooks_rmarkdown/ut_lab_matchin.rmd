@@ -5,18 +5,21 @@ date: "5/28/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup}
+    knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
+```{r libraries, include=FALSE}
 library(readr)
 library(dplyr)
 library(Matching)
 library(rbounds)
 
 
-df <- read_csv("cleaned_ut_census_tea.csv", 
+df <- read_csv("data/external/cleaned_ut_census_tea.csv", 
     col_types = cols(Time_Period = col_skip()))
   
 ```
-
 
 ```{r modifiying_gpa_mock}
 
@@ -24,9 +27,6 @@ df <- read_csv("cleaned_ut_census_tea.csv",
 df$cumulative_gpa <- df$cumulative_gpa + ifelse(df$mock_treatment == 1, runif(1, 0, 1), 0)
 
 ```
-
-
-
 
 ```{r propensity_score_matching}
 
@@ -42,7 +42,6 @@ rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
 summary(rr1)
 ```
 
-
 ```{r qqplot}
 qqplot(df$cumulative_gpa[rr1$index.control], df$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
@@ -51,16 +50,12 @@ abline(coef = c(0, 1), col = 2)
 
 ```
 
-
-
 ```{r MatchBalance}
 
  MatchBalance(Tr ~ age +citizenship + gender + ethnicities + hs_rank + c_rating + city_size , match.out = rr1, nboots = 1000, data = df)
 
 
 ```
-
-
 
 ```{r sensitivity_test}
 
