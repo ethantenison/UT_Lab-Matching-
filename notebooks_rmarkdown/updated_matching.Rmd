@@ -19,7 +19,7 @@ library(readxl)
 library(janitor)
 ```
 
-## IPD Data 
+## IPD Data
 
 ```{r ipd, message=TRUE, warning=TRUE, include=FALSE}
 
@@ -28,4 +28,31 @@ ipd_raw <-
            col_types = cols(X1 = col_skip()))
 
 
+```
+
+**Going from long to wide to look at those that are repeaters**
+
+```{r long2wide}
+
+ipdlong <- ipd_raw
+ipdlong <- filter(ipdlong, year != 2015)
+ipdlong <- filter(ipdlong, year != "2013/2014")
+ipdlong <- ipdlong[,-2]
+ipdlong$binary <- 1
+
+ipdwide <- pivot_wider(ipdlong, names_from = year, values_from = binary) 
+ipdwide[is.na(ipdwide)] <- 0
+ipdwide$total_years <- rowSums(ipdwide[,c("2016","2017","2018","2019","2020")])
+
+```
+
+Based on the row sums, there are quite a few students who returned for multiple years.
+
+In order to save my sanity, I'm going to look at 2016 first.
+
+**2016**
+
+```{r 2016}
+
+df16 <- filter(ipd_raw, year == 2016)
 ```
