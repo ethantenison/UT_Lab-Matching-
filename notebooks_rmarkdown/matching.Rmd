@@ -1,0 +1,100 @@
+---
+title: "simple_matching_diffndiff"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
+## Simple Matching and Diff n Diff
+
+Because there are so many different time period, I'm going to break up the evaluation down to simple parts
+
+```{r libraries, message=TRUE, warning=TRUE, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(readxl)
+library(janitor)
+library(Matching)
+library(rbounds)
+```
+
+## IPD Data
+
+```{r ipd, message=TRUE, warning=TRUE, include=FALSE}
+
+ipd_raw <-
+  read_csv("data/interim/IPD_eid_list_minus2015.csv",
+           col_types = cols(X1 = col_skip()))
+
+cola_raw <- read_csv("data/processed/cola_total.csv")
+cola_raw <- clean_names(cola_raw)
+```
+
+**Going from long to wide to look at those that are repeaters**
+
+```{r long2wide}
+
+ipdlong <- ipd_raw
+ipdlong <- filter(ipdlong, year != 2015)
+ipdlong <- filter(ipdlong, year != "2013/2014")
+ipdlong <- ipdlong[,-2]
+ipdlong$binary <- 1
+
+ipdwide <- pivot_wider(ipdlong, names_from = year, values_from = binary) 
+ipdwide[is.na(ipdwide)] <- 0
+ipdwide$total_years <- rowSums(ipdwide[,c("2016","2017","2018","2019","2020")])
+
+```
+
+Based on the row sums, there are quite a few students who returned for multiple years.
+
+In order to save my sanity, I'm going to look at 2017 first.
+
+**2017**
+
+```{r 2016}
+
+
+df17 <- filter(ipd_raw, year == 2017)
+cola16 <- filter(cola_raw, semester == "Fall 2016")
+df17 <- left_join(df17,cola16, by = "eid")
+# About 10% are not in the database for the previous semester 
+
+completeFun <- function(data, desiredCols) {
+  completeVec <- complete.cases(data[, desiredCols])
+  return(data[completeVec, ])
+}
+
+df17 <- completeFun(df17, "x1")
+
+#Removing cases of people who graduated in 2016
+cola16 <- filter(cola16, academic_status != "Graduated")
+df17 <- filter(ipd_raw, year == 2017)
+cola16 <- left_join(cola16, df17, by = 'eid')
+cola16$name.y[is.na(cola16$name.y)] <- 0
+cola16$name.y[cola16$name.y != 0] <- 1
+cola16$name.y <- as.numeric(cola16$name.y)
+cola16 <- cola16 %>% rename("treatment" = "name.y")
+
+```
+
+**Propensity Score Matching**
+
+```{r propensity_score}
+
+
+Y <- cola16$cumulative_gpa
+Tr <- cola16$treatment
+
+
+glm1 <- glm(Tr ~ age + citizenship + gender + ethnicities + hs_rank, family=binomial, data = cola16)
+
+# By default Match does 1-to-1 matching with replacement and estimates average treatment effect (ATT)
+rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
+
+summary(rr1)
+
+```
