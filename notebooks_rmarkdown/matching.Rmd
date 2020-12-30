@@ -29,6 +29,8 @@ ipd_raw <-
   read_csv("data/interim/IPD_eid_list_minus2015.csv",
            col_types = cols(X1 = col_skip()))
 
+ipd_raw <- ipd_raw %>% mutate_all( ~ gsub(" \\(R\\)| \\*Minor", "", .))
+
 cola_raw <- read_csv("data/processed/cola_total.csv")
 cola_raw <- clean_names(cola_raw)
 ```
@@ -47,6 +49,13 @@ ipdwide <- pivot_wider(ipdlong, names_from = year, values_from = binary)
 ipdwide[is.na(ipdwide)] <- 0
 ipdwide$total_years <- rowSums(ipdwide[,c("2016","2017","2018","2019","2020")])
 
+ipdmultiples <- filter(ipdwide, total_years > 1)
+ipdmultiples_eids <- ipdmultiples$eid
+
+#Removing students who have multiple years 
+ipd_minus_multiples <- ipd_raw %>% filter(!eid %in% ipdmultiples_eids)
+
+
 ```
 
 Based on the row sums, there are quite a few students who returned for multiple years.
@@ -55,29 +64,32 @@ In order to save my sanity, I'm going to look at 2017 first.
 
 **2017**
 
-```{r 2016}
+```{r 2017}
 
 
-df17 <- filter(ipd_raw, year == 2017)
-cola16 <- filter(cola_raw, semester == "Fall 2016")
-df17 <- left_join(df17,cola16, by = "eid")
+df <- filter(ipd_minus_multiples, year == 2017)
+cola_before <- filter(cola_raw, semester == "Fall 2016")
+df <- left_join(df,cola_before, by = "eid")
 # About 10% are not in the database for the previous semester 
+
+df_possible_freshman <- df[is.na(df$x1),]
+
 
 completeFun <- function(data, desiredCols) {
   completeVec <- complete.cases(data[, desiredCols])
   return(data[completeVec, ])
 }
 
-df17 <- completeFun(df17, "x1")
+df <- completeFun(df, "x1")
 
 #Removing cases of people who graduated in 2016
-cola16 <- filter(cola16, academic_status != "Graduated")
-df17 <- filter(ipd_raw, year == 2017)
-cola16 <- left_join(cola16, df17, by = 'eid')
-cola16$name.y[is.na(cola16$name.y)] <- 0
-cola16$name.y[cola16$name.y != 0] <- 1
-cola16$name.y <- as.numeric(cola16$name.y)
-cola16 <- cola16 %>% rename("treatment" = "name.y")
+cola_before <- filter(cola_before, academic_status != "Graduated")
+df <- filter(ipd_raw, year == 2017)
+cola_before <- left_join(cola_before, df, by = 'eid')
+cola_before$name.y[is.na(cola_before$name.y)] <- 0
+cola_before$name.y[cola_before$name.y != 0] <- 1
+cola_before$name.y <- as.numeric(cola_before$name.y)
+cola_before <- cola_before %>% rename("treatment" = "name.y")
 
 ```
 
@@ -86,15 +98,146 @@ cola16 <- cola16 %>% rename("treatment" = "name.y")
 ```{r propensity_score}
 
 
-Y <- cola16$cumulative_gpa
-Tr <- cola16$treatment
+Y <- cola_before$cumulative_gpa
+Tr <- cola_before$treatment
 
 
-glm1 <- glm(Tr ~ age + citizenship + gender + ethnicities + hs_rank, family=binomial, data = cola16)
+glm1 <- glm(Tr ~ age + citizenship + gender + ethnicities + hs_rank_2 + family_income + classification + cumulative_gpa, family=binomial, data = cola_before)
 
 # By default Match does 1-to-1 matching with replacement and estimates average treatment effect (ATT)
 rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
 
 summary(rr1)
 
+```
+
+```{r matching_diagnostic}
+
+qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
+abline(coef = c(0, 1), col = 2)
+
+
+```
+
+```{r before_after_match, message=FALSE, warning=FALSE, include=FALSE}
+
+ MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank_2 + family_income + classification + cumulative_gpa, match.out = rr1, nboots = 1000, data = cola_before)
+
+```
+
+**Creating the matched dataset for 2017**
+
+-   Starts with gpa from Fall 2016
+
+```{r setup_diffndiff}
+treated_list <- unique(rr1$index.treated)
+treated <- cola_before[treated_list, ]
+control_list <- unique(rr1$index.control)
+control <- cola_before[control_list, ]
+
+df <-
+  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+
+#add in GPA for end of 2017
+cola_after <- filter(cola_raw, semester == "Fall 2017")
+df <- left_join(df, cola_after, by = "eid")
+
+
+#Finding the GPA's for students who graduated
+df_onlyspring_raw <- df[is.na(df$x1), ]
+
+df <- completeFun(df, "x1")
+df <-
+  df %>% rename(gpa_after = cumulative_gpa) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+df$year <- 2017
+
+df_before <-
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+
+df_after <-
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
+
+
+df17_two_semesters <- bind_rows(df_before, df_after)
+
+
+
+```
+
+**Find matches for those that graduated halfway**
+
+```{r graduate_spring2017, include=FALSE}
+
+df_onlyspring <-
+  df_onlyspring_raw %>% filter(treatment == 1) %>% dplyr::select(name.x, eid) %>% rename(name = name.x)
+cola_before <- filter(cola_raw, semester == "Fall 2016")
+cola_before <- mutate(cola_before, year = 2017)
+
+
+
+#Removing cases of people who graduated in 2016
+cola_before <- filter(cola_before, academic_status != "Graduated")
+cola_before <- left_join(cola_before, df_onlyspring, by = 'eid')
+cola_before$name.y[is.na(cola_before$name.y)] <- 0
+cola_before$name.y[cola_before$name.y != 0] <- 1
+cola_before$name.y <- as.numeric(cola_before$name.y)
+cola_before <- cola_before %>% rename("treatment" = "name.y")
+
+Y <- cola_before$cumulative_gpa
+Tr <- cola_before$treatment
+
+
+glm1 <- glm(Tr ~ age + citizenship + gender + ethnicities + hs_rank_2 + family_income + classification + cumulative_gpa, family=binomial, data = cola_before)
+
+# By default Match does 1-to-1 matching with replacement and estimates average treatment effect (ATT)
+rr1 <- Match(Y = Y, Tr = Tr, X = glm1$fitted)
+
+summary(rr1)
+
+#diagnostic 
+qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
+abline(coef = c(0, 1), col = 2)
+
+#matchbalance
+ MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank_2 + family_income + classification + cumulative_gpa, match.out = rr1, nboots = 1000, data = cola_before)
+ 
+#pulling the after gpa
+ treated_list <- unique(rr1$index.treated)
+treated <- cola_before[treated_list, ]
+control_list <- unique(rr1$index.control)
+control <- cola_before[control_list, ]
+
+df_spring <-
+  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+
+#add in GPA for end of 2017
+cola_after_spring <- filter(cola_raw, semester == "Spring 2017")
+df_spring <- left_join(df_spring, cola_after_spring, by = "eid")
+
+
+
+df_spring <- completeFun(df_spring, "x1")
+df_spring <-
+  df_spring %>% rename(gpa_after = cumulative_gpa) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+df_spring$year <- 2017
+
+df_before <-
+  df_spring %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+
+df_after <-
+  df_spring %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+df_after$treatment_strength <- ifelse(df_spring$treatment == 1, 1,0)
+
+df17_spring <- bind_rows(df_before, df_after)
+```
+
+**DIfference in Difference**
+
+```{r diffndiff}
+
+dfall <- bind_rows(df17_two_semesters,df17_spring)
+dfall$did <- dfall$time * dfall$treatment
+didreg = lm(gpa ~ treatment + time + treatment_strength + did, data = dfall)
+summary(didreg)
 ```
