@@ -536,16 +536,16 @@ df_total = data.frame()
 **Cleaning Demographics**
 
 ```{r demos}
-df2 <- df_total %>% dplyr::mutate(Ethnicities = replace_na(Ethnicities, "Mixed Race"))
+df2 <- df_total %>% dplyr::mutate(ethnicities = replace_na(ethnicities, "Mixed Race"))
 
-for (i in 1:length(df$Ethnicities)) {
-  if (df2$Ethnicities[i] != "White" &
-      df2$Ethnicities[i] != "Asian" &
-      df2$Ethnicities[i] != "Black or African American" &
-      df2$Ethnicities[i] != "Hispanic" &
-      df2$Ethnicities[i] != "Native Hawaiian or Other Pacific Islander" &
-      df2$Ethnicities[i] != "American Indian or Alaska Native") {
-    df2$Ethnicities[i] <- "Mixed Race"
+for (i in 1:length(df$ethnicities)) {
+  if (df2$ethnicities[i] != "White" &
+      df2$ethnicities[i] != "Asian" &
+      df2$ethnicities[i] != "Black or African American" &
+      df2$ethnicities[i] != "Hispanic" &
+      df2$ethnicities[i] != "Native Hawaiian or Other Pacific Islander" &
+      df2$ethnicities[i] != "American Indian or Alaska Native") {
+    df2$ethnicities[i] <- "Mixed Race"
   }
 }
 
@@ -556,16 +556,94 @@ for (i in 1:length(df$Ethnicities)) {
 ```{r agehighchoolrank}
 
 df3 <-
-  df2 %>% rename(Age = `Current Ageas of today`) %>% mutate_all( ~ gsub(" \\(R\\)| \\*Minor", "", .))
+  df2 %>% rename(Age = current_ageas_of_today) %>% mutate_all( ~ gsub(" \\(R\\)| \\*Minor", "", .))
 
-df3$`HS Rank` <- gsub("unknown", "1/1", df3$`HS Rank`)
-x <- as.data.frame(str_split_fixed(df3$`HS Rank`, "/", 2))
+df3$hs_rank <- gsub("unknown", "1/1", df3$hs_rank)
+x <- as.data.frame(str_split_fixed(df3$hs_rank, "/", 2))
 x$V1 <- as.numeric(x$V1)
 x$V2 <- as.numeric(x$V2)
 x <- mutate(x, hs_rank = V1/V2 )
 df3$hs_rank <- x$hs_rank
 
 
+```
+
+**Recoding Parent's Education**
+
+```{r parents_edu}
+
+df3$father_s_education[df3$father_s_education == "Unknown"] <- 0
+df3$father_s_education[df3$father_s_education == "Educational Level Unknown"] <-
+  0
+df3$father_s_education[df3$father_s_education == "No High School"] <-
+  1
+df3$father_s_education[df3$father_s_education == "Some High School"] <-
+  2
+df3$father_s_education[df3$father_s_education == "High School Diploma Or Equivalent"] <-
+  3
+df3$father_s_education[df3$father_s_education == "Some College"] <-
+  4
+df3$father_s_education[df3$father_s_education == "Associate's Degree"] <-
+  5
+df3$father_s_education[df3$father_s_education == "Bachelor's Or Four-year Degree"] <-
+  6
+df3$father_s_education[df3$father_s_education == "Graduate Or Professional Degree"] <-
+  7
+
+
+df3$mother_s_education[df3$mother_s_education == "Unknown"] <- 0
+df3$mother_s_education[df3$mother_s_education == "Educational Level Unknown"] <-
+  0
+df3$mother_s_education[df3$mother_s_education == "No High School"] <-
+  1
+df3$mother_s_education[df3$mother_s_education == "Some High School"] <-
+  2
+df3$mother_s_education[df3$mother_s_education == "High School Diploma Or Equivalent"] <-
+  3
+df3$mother_s_education[df3$mother_s_education == "Some College"] <-
+  4
+df3$mother_s_education[df3$mother_s_education == "Associate's Degree"] <-
+  5
+df3$mother_s_education[df3$mother_s_education == "Bachelor's Or Four-year Degree"] <-
+  6
+df3$mother_s_education[df3$mother_s_education == "Graduate Or Professional Degree"] <-
+  7
+
+df3$father_s_education <- as.numeric(df3$father_s_education)
+df3$mother_s_education <- as.numeric(df3$mother_s_education)
+
+df3$parents_education <- 0
+  
+for (i in 1:length(df3$father_s_education)) {
+  if (df3$father_s_education[i]  > df3$mother_s_education[i]){
+    df3$parents_education[i] <- df3$father_s_education[i]
+  }
+  else if(df3$father_s_education[i]  < df3$mother_s_education[i]){
+    df3$parents_education[i] <- df3$mother_s_education[i]
+  }
+  else {
+    df3$parents_education[i] <- df3$mother_s_education[i]
+  }
+}
+
+df3$parents_education <- as.character(df3$parents_education)
+
+df3$parents_education[df3$parents_education == "0"] <- "Unknown"
+
+df3$parents_education[df3$parents_education == "1"] <-
+  "No High School"
+df3$parents_education[df3$parents_education == "2"] <-
+  "Some High School"
+df3$parents_education[df3$parents_education == "3"] <-
+  "High School Diploma Or Equivalent"
+df3$parents_education[df3$parents_education == "4"] <-
+  "Some College"
+df3$parents_education[df3$parents_education == "5"] <-
+  "Associate's Degree"
+df3$parents_education[df3$parents_education == "6"] <-
+  "Bachelor's Or Four-year Degree"
+df3$parents_education[df3$parents_education == "7"] <-
+  "Graduate Or Professional Degree"
 ```
 
 **Saving**
