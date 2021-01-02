@@ -11,10 +11,244 @@ library(readr)
 library(readxl)
 ```
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
 **Merging Dataframes**
+
+-   For 2015 and earlier, the datacleaning is a little different.
+
+```{r 2015_and_earlier, message=FALSE, warning=FALSE}
+
+###################################Spring 2013#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Spring 2013, C1.xlsx")
+
+df2 <- read_excel("data/raw/COLA Toolkit, Spring 2013, C2.xlsx")
+
+df3 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2013, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2013 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(spring2013))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2013 <-spring2013 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Spring 2013")
+
+names(spring2013)[3] <- "Academic Status"
+names(spring2013)[55] <- "Semester GPA"
+names(spring2013)[57] <- "Semester Hrs Failed"
+names(spring2013)[58] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+spring2013 <- spring2013[-c(19, 56)]
+
+
+
+###################################Fall 2013#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2013, C1, 1st Half.xlsx")
+
+df2 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2013, C1, 2nd Half.xlsx")
+
+df3 <- read_excel("data/raw/COLA Toolkit, Fall 2013, C2.xlsx")
+
+df4 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2013, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2013 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(fall2013))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2013 <-fall2013 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df4)[!(names(df4) %in% names(fall2013))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2013 <-fall2013 %>% left_join((df4 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Fall 2013")
+
+names(fall2013)[28] <- "Academic Status"
+names(fall2013)[21] <- "Semester GPA Hrs w/o CBE"
+names(fall2013)[34] <- "Prob-Dism, Begin of semester"
+names(fall2013)[72] <- "Semester GPA"
+names(fall2013)[73] <- "Semester Hrs Failed"
+names(fall2013)[74] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+fall2013 <- fall2013[-c(36, 75)]
+
+
+###################################Spring 2014#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Spring 2014, C1, 1st Half.xlsx")
+
+df2 <-
+  read_excel("data/raw/COLA Toolkit, Spring 2014, C1, 2nd Half.xlsx")
+
+df3 <- read_excel("data/raw/COLA Toolkit, Spring 2014, C2.xlsx")
+
+df4 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2014, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2014 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(spring2014))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2014 <-spring2014 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df4)[!(names(df4) %in% names(spring2014))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2014 <-spring2014 %>% left_join((df4 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Spring 2014")
+
+names(spring2014)[28] <- "Academic Status"
+names(spring2014)[21] <- "Semester GPA Hrs w/o CBE"
+names(spring2014)[34] <- "Prob-Dism, Begin of semester"
+names(spring2014)[72] <- "Semester GPA"
+names(spring2014)[73] <- "Semester Hrs Failed"
+names(spring2014)[74] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+spring2014 <- spring2014[-c(36, 75)]
+
+
+
+###################################Fall 2014#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2014, C1, 1st Half.xlsx")
+
+df2 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2014, C1, 2nd Half.xlsx")
+
+df3 <- read_excel("data/raw/COLA Toolkit, Fall 2014, C2.xlsx")
+
+df4 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2014, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2014 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(fall2014))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2014 <-fall2014 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df4)[!(names(df4) %in% names(fall2014))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2014 <-fall2014 %>% left_join((df4 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Fall 2014")
+
+names(fall2014)[28] <- "Academic Status"
+names(fall2014)[21] <- "Semester GPA Hrs w/o CBE"
+names(fall2014)[34] <- "Prob-Dism, Begin of semester"
+names(fall2014)[72] <- "Semester GPA"
+names(fall2014)[73] <- "Semester Hrs Failed"
+names(fall2014)[74] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+fall2014 <- fall2014[-c(36, 75)]
+
+
+###################################Spring 2015#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Spring 2015, C1, 1st Half.xlsx")
+
+df2 <-
+  read_excel("data/raw/COLA Toolkit, Spring 2015, C1, 2nd Half.xlsx")
+
+df3 <- read_excel("data/raw/COLA Toolkit, Spring 2015, C2.xlsx")
+
+df4 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2015, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2015 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(spring2015))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2015 <-spring2015 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df4)[!(names(df4) %in% names(spring2015))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+spring2015 <-spring2015 %>% left_join((df4 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Spring 2015")
+
+names(spring2015)[28] <- "Academic Status"
+names(spring2015)[21] <- "Semester GPA Hrs w/o CBE"
+names(spring2015)[34] <- "Prob-Dism, Begin of semester"
+names(spring2015)[72] <- "Semester GPA"
+names(spring2015)[73] <- "Semester Hrs Failed"
+names(spring2015)[74] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+spring2015 <- spring2015[-c(36, 75)]
+
+
+
+
+###################################Fall 2015#####################################
+df1 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2015, C1, 1st Half.xlsx")
+
+df2 <-
+  read_excel("data/raw/COLA Toolkit, Fall 2015, C1, 2nd Half.xlsx")
+
+df3 <- read_excel("data/raw/COLA Toolkit, Fall 2015, C2.xlsx")
+
+df4 <-
+  read_excel(
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2015, C3-4.xlsx"
+  )
+
+
+varList <- names(df2)[!(names(df2) %in% names(df1))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2015 <-df1 %>% left_join((df2 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df3)[!(names(df3) %in% names(fall2015))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2015 <-fall2015 %>% left_join((df3 %>% dplyr::select(varList)), by = "EID")
+
+varList <- names(df4)[!(names(df4) %in% names(fall2015))] # get non common names
+varList <- c(varList, "EID") # appending key parameter
+fall2015 <-fall2015 %>% left_join((df4 %>% dplyr::select(varList)), by = "EID") %>% mutate(semester = "Fall 2015")
+
+names(fall2015)[28] <- "Academic Status"
+names(fall2015)[21] <- "Semester GPA Hrs w/o CBE"
+names(fall2015)[34] <- "Prob-Dism, Begin of semester"
+names(fall2015)[72] <- "Semester GPA"
+names(fall2015)[73] <- "Semester Hrs Failed"
+names(fall2015)[74] <- "Semester Hrs Incomplete"
+
+#29 and 70 have redundant information
+fall2015 <- fall2015[-c(36, 75)]
+
+```
 
 ```{r message=FALSE, warning=FALSE}
 
+
+###################################Spring 2016#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2016, C1-2.xlsx"
@@ -37,6 +271,7 @@ names(spring2016)[72] <- "Semester Hrs Incomplete"
 #29 and 70 have redundant information
 spring2016 <- spring2016[-c(29, 70)]
 
+###################################Fall 2016#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2016, C1-2.xlsx"
@@ -60,6 +295,7 @@ names(fall2016)[72] <- "Semester Hrs Incomplete"
 #29 and 70 have redundant information
 fall2016 <- fall2016[-c(29, 70)]
 
+###################################Spring 2017#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2017, C1-2.xlsx"
@@ -82,6 +318,7 @@ names(spring2017)[71] <- "Semester Hrs Failed"
 names(spring2017)[72] <- "Semester Hrs Incomplete"
 spring2017 <- spring2017[-c(29, 70)]
 
+###################################Fall 2017#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2017, C1-2.xlsx"
@@ -104,6 +341,7 @@ names(fall2017)[71] <- "Semester Hrs Failed"
 names(fall2017)[72] <- "Semester Hrs Incomplete"
 fall2017 <- fall2017[-c(29, 70)]
 
+###################################Spring 2018#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2018, C1-2.xlsx"
@@ -126,6 +364,7 @@ names(spring2018)[71] <- "Semester Hrs Failed"
 names(spring2018)[72] <- "Semester Hrs Incomplete"
 spring2018 <- spring2018[-c(29, 70)]
 
+###################################Fall 2018#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2018, C1-2.xlsx"
@@ -148,6 +387,7 @@ names(fall2018)[71] <- "Semester Hrs Failed"
 names(fall2018)[72] <- "Semester Hrs Incomplete"
 fall2018 <- fall2018[-c(29, 70)]
 
+###################################Spring 2019#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2019, C1-2.xlsx"
@@ -170,6 +410,7 @@ names(spring2019)[71] <- "Semester Hrs Failed"
 names(spring2019)[72] <- "Semester Hrs Incomplete"
 spring2019 <- spring2019[-c(29, 70)]
 
+###################################Fall 2019#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2019, C1-2.xlsx"
@@ -192,6 +433,7 @@ names(fall2019)[71] <- "Semester Hrs Failed"
 names(fall2019)[72] <- "Semester Hrs Incomplete"
 fall2019 <- fall2019[-c(29, 70)]
 
+###################################Spring 2020#####################################
 df1 <-
   read_excel(
     "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Spring 2020, C1-2.xlsx"
@@ -214,13 +456,14 @@ names(spring2020)[71] <- "Semester Hrs Failed"
 names(spring2020)[72] <- "Semester Hrs Incomplete"
 spring2020 <- spring2020[-c(29, 70)]
 
+###################################Fall 2020#####################################
 df1 <-
   read_excel(
-    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2020, C1-2.xlsx"
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2020, C1-2 - 1Jan2021.xlsx"
   )
 df2 <-
   read_excel(
-    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2020, C3-4.xlsx"
+    "C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching/data/raw/COLA Toolkit, Fall 2020, C3-4 - 1Jan2021.xlsx"
   )
 varList <-
   names(df2)[!(names(df2) %in% names(df1))] # get non common names
@@ -237,19 +480,55 @@ names(fall2020)[72] <- "Semester Hrs Incomplete"
 fall2020 <- fall2020[-c(29, 70)]
 
 
-df <-
-  rbind(
-    spring2016,
-    fall2016,
-    spring2017,
-    fall2017,
-    spring2018,
-    fall2018,
-    spring2019,
-    fall2019,
-    spring2020,
-    fall2020
-  )
+
+
+df_list <- list(
+  spring2013,
+  fall2013,
+  spring2014,
+  fall2014,
+  spring2015,
+  fall2015,
+  spring2016,
+  fall2016,
+  spring2017,
+  fall2017,
+  spring2018,
+  fall2018,
+  spring2019,
+  fall2019,
+  spring2020,
+  fall2020
+)
+
+df_total = data.frame()
+
+  for (i in 2:length(df_list)) {
+    df <- clean_names(as.data.frame(df_list[i]))
+    df <-
+      df %>% dplyr::select(
+        name,
+        eid,
+        cola_abbr1,
+        ethnicities,
+        cumulative_gpa,
+        citizenship,
+        gender,
+        classification,
+        family_income,
+        father_s_education,
+        mother_s_education,
+        hs_rank,
+        current_ageas_of_today,
+        gpa_hrs,
+        semester,
+      )
+    
+    df_total <- rbind(df_total,df)
+  }
+    
+
+
 
 
 ```
@@ -257,7 +536,7 @@ df <-
 **Cleaning Demographics**
 
 ```{r demos}
-df2 <- df %>% dplyr::mutate(Ethnicities = replace_na(Ethnicities, "Mixed Race"))
+df2 <- df_total %>% dplyr::mutate(Ethnicities = replace_na(Ethnicities, "Mixed Race"))
 
 for (i in 1:length(df$Ethnicities)) {
   if (df2$Ethnicities[i] != "White" &
