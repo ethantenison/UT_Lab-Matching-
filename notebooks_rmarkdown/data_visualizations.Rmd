@@ -1,0 +1,104 @@
+---
+title: "Data Visualizations"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("C:/Users/tenis/Desktop/Data_Projects/UT_Lab-Matching")) 
+```
+
+```{r libraries}
+library(ggplot2)
+library(tidyverse)
+library(readr)
+library(readxl)
+library(janitor)
+windowsFonts(Times=windowsFont("Times"))
+
+ipd_raw <-
+  read_csv("data/interim/IPD_eid_list_minus2015.csv",
+           col_types = cols(X1 = col_skip()))
+
+ipd_raw <- ipd_raw %>% mutate_all( ~ gsub(" \\(R\\)| \\*Minor", "", .))
+```
+
+**Density Plot IPD by Year**
+
+```{r density}
+
+
+den <- ipd_raw
+
+den <- den %>% rename(Year = year)
+den$Year[den$Year == "2013/2014"] <- "2014"
+den$Year <- as.numeric(den$Year)
+
+theme_set(theme_bw())
+p <-
+  ggplot(den, aes(x = Year)) +
+  geom_density(fill = "#0072B2") +
+  scale_x_continuous("Year", labels = as.character(den$Year), breaks = den$Year) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.title.y = element_text(vjust = 3.5),
+    axis.title.x = element_text(vjust = -2.5),
+    text = element_text(
+      family = "Times",
+      face = "bold",
+      size = 20
+    ),
+    plot.margin = margin(10, 10, 10, 10)
+  ) +
+  ylab("Density")
+  
+
+p
+
+
+ggsave("reports/ipd_density.png", dpi = 500, height = 4.5, width =7)
+```
+
+```{r line}
+
+lin <- ipd_raw %>% group_by(year) %>% count(year) %>% rename(Number = n, Year = year)
+lin$Year[lin$Year == "2013/2014"] <- "2014"
+lin$Year <- as.numeric(lin$Year)
+
+ggplot(lin, aes(x=Year, y=Number)) +
+  geom_line()
+```
+
+```{r histogram_line}
+
+p <- ggplot(den) +
+  geom_histogram(aes(x = Year),
+                 binwidth = 1,
+                 fill = "#0072B2",
+                 color = "white") +
+  #geom_line(data = lin, aes(x = Year, y = Number), color = "red") +
+  scale_x_continuous("Year", labels = as.character(den$Year), breaks = den$Year) +
+  scale_y_continuous(breaks = c(0,25,50,75,100,125)) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.title.y = element_text(vjust = 3.5),
+    axis.title.x = element_text(vjust = -2.5),
+    text = element_text(
+      family = "Times",
+      face = "bold",
+      size = 20
+    ),
+    plot.margin = margin(10, 10, 10, 10)
+  ) +
+  ylab("Number")
+p
+
+ggsave("reports/ipd_histogram.png", dpi = 500, height = 4.5, width =7)
+```

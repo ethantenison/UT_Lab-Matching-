@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse)
 library(readr)
 library(readxl)
+library(janitor)
 ```
 
 ```{r setup, include=FALSE}
@@ -512,6 +513,7 @@ df_total = data.frame()
         cola_abbr1,
         ethnicities,
         cumulative_gpa,
+        academic_status,
         citizenship,
         gender,
         classification,
