@@ -1119,12 +1119,27 @@ df18$year <- 2018
 df19 <-  bind_rows(df19_two_semesters, df19_four_semesters)
 df19$year <- 2019
 
-
+#Full diffndiff
 dfall <- bind_rows(df15, df16, df17, df18, df19)
 dfall$did <- dfall$time * dfall$treatment
 didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall)
 print("Difference in Difference")
 summary(didreg)
+
+#Just using treatment
+didreg = lm(gpa ~ treatment + time + did, data = dfall)
+print("Difference in Difference")
+summary(didreg)
+
+#Just using treatment strength 
+didreg = lm(gpa ~ treatment_strength + time + did, data = dfall)
+print("Difference in Difference")
+summary(didreg)
+
+#Correlation between treatment and treatment strength 
+print("Correlation between treatment and treatment strength")
+cor(dfall$treatment, dfall$treatment_strength)
+
 ```
 
 ```{r regression}
@@ -1138,7 +1153,7 @@ after <-
 abbr <-
   bind_rows(
     cola_abb2015,
-    cola_abb2015spring,
+    #cola_abb2015spring,
     cola_abb20154,
     cola_abb2016,
     cola_abb2016spring,
