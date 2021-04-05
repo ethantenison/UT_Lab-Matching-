@@ -1123,6 +1123,7 @@ df19$year <- 2019
 dfall <- bind_rows(df15, df16, df17, df18, df19)
 dfall$did <- dfall$time * dfall$treatment
 didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall)
+print("Difference in Difference")
 summary(didreg)
 ```
 
@@ -1170,6 +1171,7 @@ reg_dummies <-
 summary(reg_dummies)
 
 #Fixed Effects Regression (Dummary Variable, treatment only)
+print("Treatment")
 reg_dummies <-
   lm(
     gpa_after ~ gpa_before + treatment + factor(year),
@@ -1178,6 +1180,7 @@ reg_dummies <-
 summary(reg_dummies)
 
 #Fixed Effects Regression (Dummary Variable, treatment strength only)
+print("Treatment Strength")
 reg_dummies <-
   lm(
     gpa_after ~ gpa_before + treatment_strength + factor(year),
