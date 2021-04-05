@@ -2,6 +2,8 @@
 
 
 ### Directory Structure
+
+```
 +-- README.md           <- The top-level readme file
 +-- data
 |    +-- external       <- Data from third party sources
@@ -19,4 +21,4 @@
 |
 +-- scripts 		        <- Script for propensity score matching
 
-
+```
