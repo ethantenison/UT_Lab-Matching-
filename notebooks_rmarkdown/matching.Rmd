@@ -20,6 +20,7 @@ library(janitor)
 library(Matching)
 library(rbounds)
 library("WeightIt")
+library(cobalt)
 ```
 
 ## IPD Data
@@ -251,13 +252,12 @@ entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_in
 
 #Add in weights and cleaning 
 weights <- entropy$weights
-df$weights <- weights 
+df_spring$weights <- weights 
 df_spring <- df_spring %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after_spring <- filter(cola_raw, semester == "Spring 2017")
 df_spring <- left_join(df_spring, cola_after_spring, by = "eid")
-
 
 
 df_spring <- completeFun(df_spring, "x1")
@@ -318,8 +318,6 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -328,7 +326,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2018
 cola_after <- filter(cola_raw, semester == "Fall 2018")
@@ -339,14 +345,14 @@ df_three_semesters_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2017
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year,weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 
 df17_four_semesters <- bind_rows(df_before, df_after)
@@ -406,8 +412,6 @@ qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa
 abline(coef = c(0, 1), col = 2)
 
 
-#Match Balance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income , match.out = rr1, nboots = 1000, data = cola_before)
  
 #Grabbing After gpa  
 treated_list <- unique(rr1$index.treated)
@@ -416,7 +420,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights, had to take out gender because all male, and parents education 
+entropy <- weightit(treatment ~ age  + ethnicities + hs_rank + family_income  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after <- filter(cola_raw, semester == "Fall 2015")
@@ -428,14 +440,14 @@ df_onlyspring_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2015
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
 
 
@@ -488,8 +500,6 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -498,7 +508,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights, take out gender and parents education, family income, ACTUALLY TOO SMALL SAMPLE 
+# entropy <- weightit(treatment ~ age + ethnicities  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+# 
+# #Add in weights and cleaning 
+# weights <- entropy$weights
+df$weights <- 0
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end 
 cola_after <- filter(cola_raw, semester == "Fall 2016")
@@ -509,14 +527,14 @@ df_three_semesters_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2016
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 
 df15_four_semesters <- bind_rows(df_before, df_after)
@@ -571,8 +589,6 @@ qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa
 abline(coef = c(0, 1), col = 2)
 
 
-#Match Balance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income , match.out = rr1, nboots = 1000, data = cola_before)
  
 #Grabbing After gpa  
 treated_list <- unique(rr1$index.treated)
@@ -581,7 +597,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control)
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after <- filter(cola_raw, semester == "Fall 2016")
@@ -593,14 +617,14 @@ df_onlyspring_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2016
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
 
 
@@ -641,9 +665,7 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
- 
+
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
 treated <- cola_before[treated_list, ]
@@ -651,7 +673,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df_spring <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df_spring)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df_spring$weights <- weights 
+df_spring <- df_spring %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after_spring <- filter(cola_raw, semester == "Spring 2016")
@@ -660,14 +690,14 @@ df_spring <- left_join(df_spring, cola_after_spring, by = "eid")
 
 df_spring <- completeFun(df_spring, "x1")
 df_spring <-
-  df_spring %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df_spring %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df_spring$year <- 2016
 
 df_before <-
-  df_spring %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df_spring %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df_spring %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df_spring %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df_spring$treatment == 1, 1,0)
 
 df16_spring <- bind_rows(df_before, df_after)
@@ -711,8 +741,6 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -721,7 +749,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end 
 cola_after <- filter(cola_raw, semester == "Fall 2017")
@@ -732,14 +768,14 @@ df_three_semesters_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2016
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 
 df16_four_semesters <- bind_rows(df_before, df_after)
@@ -791,9 +827,6 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-
-#Match Balance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income , match.out = rr1, nboots = 1000, data = cola_before)
  
 #Grabbing After gpa  
 treated_list <- unique(rr1$index.treated)
@@ -802,7 +835,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after <- filter(cola_raw, semester == "Fall 2018")
@@ -814,14 +855,14 @@ df_onlyspring_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2018
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
 
 
@@ -861,8 +902,6 @@ summary(rr1)
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
 
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -871,7 +910,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df_spring <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df_spring)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df_spring$weights <- weights 
+df_spring <- df_spring %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2017
 cola_after_spring <- filter(cola_raw, semester == "Spring 2018")
@@ -880,14 +927,14 @@ df_spring <- left_join(df_spring, cola_after_spring, by = "eid")
 
 df_spring <- completeFun(df_spring, "x1")
 df_spring <-
-  df_spring %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df_spring %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df_spring$year <- 2018
 
 df_before <-
-  df_spring %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df_spring %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df_spring %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df_spring %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df_spring$treatment == 1, 1,0)
 
 df18_spring <- bind_rows(df_before, df_after)
@@ -930,9 +977,6 @@ summary(rr1)
 #diagnostic 
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
-
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -941,7 +985,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control)
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2018
 cola_after <- filter(cola_raw, semester == "Fall 2019")
@@ -952,14 +1004,14 @@ df_three_semesters_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2018
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 
 df18_four_semesters <- bind_rows(df_before, df_after)
@@ -1010,9 +1062,6 @@ summary(rr1)
 #Matching Diagnostic 
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
-
-#Match Balance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income , match.out = rr1, nboots = 1000, data = cola_before)
  
 #Grabbing After gpa  
 treated_list <- unique(rr1$index.treated)
@@ -1021,7 +1070,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end 
 cola_after <- filter(cola_raw, semester == "Fall 2019")
@@ -1033,14 +1090,14 @@ df_onlyspring_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2019
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
 
 
@@ -1085,9 +1142,6 @@ summary(rr1)
 #diagnostic 
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
 abline(coef = c(0, 1), col = 2)
-
-##MatchBalance
- #MatchBalance(Tr ~ age + citizenship + gender + ethnicities + hs_rank + family_income  , match.out = rr1, nboots = 1000, data = cola_before)
  
 #pulling the after gpa
  treated_list <- unique(rr1$index.treated)
@@ -1096,7 +1150,15 @@ control_list <- unique(rr1$index.control)
 control <- cola_before[control_list, ]
 
 df <-
-  treated %>% bind_rows(control) %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year) %>% rename(gpa_before = cumulative_gpa)
+  treated %>% bind_rows(control) 
+
+#Entropy balancing for weights 
+entropy <- weightit(treatment ~ age + gender + ethnicities + hs_rank + family_income + parents_education  + cumulative_gpa, method = "ebal", estimand = "ATE", data = df)
+
+#Add in weights and cleaning 
+weights <- entropy$weights
+df$weights <- weights 
+df <- df %>% dplyr::select(name.x, eid, cumulative_gpa, treatment, year, weights) %>% rename(gpa_before = cumulative_gpa)
 
 #add in GPA for end of 2018
 cola_after <- filter(cola_raw, semester == "Fall 2020")
@@ -1107,14 +1169,14 @@ df_three_semesters_raw <- df[is.na(df$x1), ]
 
 df <- completeFun(df, "x1")
 df <-
-  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year)
+  df %>% rename(gpa_after = cumulative_gpa ) %>% dplyr::select(name.x, eid, gpa_before, gpa_after, treatment, year, weights)
 df$year <- 2019
 
 df_before <-
-  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
+  df %>% dplyr::select(name.x, eid, gpa_before, treatment, year, weights) %>% rename(time = year, gpa = gpa_before) %>% mutate(time = 0, treatment_strength = 0)
 
 df_after <-
-  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
+  df %>% dplyr::select(name.x, eid, gpa_after, treatment, year, weights) %>% rename(time = year, gpa = gpa_after) %>% mutate(time = 1)
 df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 
 df19_four_semesters <- bind_rows(df_before, df_after)
@@ -1140,20 +1202,24 @@ df18$year <- 2018
 df19 <-  bind_rows(df19_two_semesters, df19_four_semesters)
 df19$year <- 2019
 
+
 #Full diffndiff
 dfall <- bind_rows(df15, df16, df17, df18, df19)
+
+
+dfall$weights[dfall$weights == 0] <- 1
 dfall$did <- dfall$time * dfall$treatment
-didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall)
+didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall, weights = weights)
 print("Difference in Difference")
 summary(didreg)
 
 #Just using treatment
-didreg = lm(gpa ~ treatment + time + did, data = dfall)
+didreg = lm(gpa ~ treatment + time + did, data = dfall, weights = weights)
 print("Difference in Difference")
 summary(didreg)
 
 #Just using treatment strength 
-didreg = lm(gpa ~ treatment_strength + time + did, data = dfall)
+didreg = lm(gpa ~ treatment_strength + time + did, data = dfall, weights = weights)
 print("Difference in Difference")
 summary(didreg)
 
@@ -1169,7 +1235,7 @@ before <-
   dfall %>% filter(time == 0) %>% rename("gpa_before" = "gpa") %>% dplyr::select(name.x, eid, gpa_before)
 
 after <-
-  dfall %>% filter(time == 1) %>% rename("gpa_after" = "gpa") %>% dplyr::select(name.x, eid, gpa_after, treatment, treatment_strength, year)
+  dfall %>% filter(time == 1) %>% rename("gpa_after" = "gpa") %>% dplyr::select(name.x, eid, gpa_after, treatment, treatment_strength, year, weights)
 
 abbr <-
   bind_rows(
@@ -1188,21 +1254,21 @@ abbr <-
   )
 abbr <- unique(abbr)
 
-reg_df <- after %>% left_join(before, by = "eid") %>% dplyr::select(eid, gpa_before, gpa_after, treatment, treatment_strength, year) %>% left_join(abbr)
+reg_df <- after %>% left_join(before, by = "eid") %>% dplyr::select(eid, gpa_before, gpa_after, treatment, treatment_strength, year, weights) %>% left_join(abbr)
 
 
 
 #Regular regression 
 reg <-
   lm(gpa_after ~ gpa_before + treatment + treatment_strength + year,
-     data = reg_df)
+     data = reg_df, weights = weights)
 summary(reg)
 
 #Fixed Effects Regression (Dummary Variable)
 reg_dummies <-
   lm(
     gpa_after ~ gpa_before + treatment + treatment_strength + factor(year),
-    data = reg_df
+    data = reg_df, weights = weights
   )
 summary(reg_dummies)
 
@@ -1211,7 +1277,7 @@ print("Treatment")
 reg_dummies <-
   lm(
     gpa_after ~ gpa_before + treatment + factor(year),
-    data = reg_df
+    data = reg_df, weights = weights
   )
 summary(reg_dummies)
 
@@ -1220,16 +1286,9 @@ print("Treatment Strength")
 reg_dummies <-
   lm(
     gpa_after ~ gpa_before + treatment_strength + factor(year),
-    data = reg_df
+    data = reg_df, weights = weights
   )
 summary(reg_dummies)
-
-#Within Estimator
- #library(plm)
- #plm <-
-#   plm(gpa_after ~ gpa_before + treatment + treatment_strength + factor(year),
- #     data = reg_df, index = "cola_abbr1", model= "within")
-# summary(plm)
 
 
 
