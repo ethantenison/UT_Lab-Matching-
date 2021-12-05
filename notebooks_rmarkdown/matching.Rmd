@@ -23,7 +23,9 @@ library("WeightIt")
 library(cobalt)
 ```
 
-## IPD Data
+## IPD Data + COLA Data
+
+-   Individuals who coded themselves into multiple racial categories (there are a ton of combinations) were re-coded to be mixed race.
 
 ```{r ipd, message=TRUE, warning=TRUE, include=FALSE}
 
@@ -48,13 +50,11 @@ for (i in 1:length(cola_raw$ethnicities)) {
 }
 ```
 
-**Going from long to wide to look at those that are repeaters**
+## Row Sums
 
 ```{r long2wide}
 
 ipdlong <- ipd_raw
-#ipdlong <- filter(ipdlong, year != 2015)
-#ipdlong <- filter(ipdlong, year != "2013/2014")
 ipdlong <- ipdlong[,-2]
 ipdlong$binary <- 1
 
@@ -71,9 +71,9 @@ ipd_minus_multiples <- ipd_raw %>% filter(!eid %in% ipdmultiples_eids)
 
 ```
 
-Based on the row sums, there are quite a few students who returned for multiple years. In order to save my sanity, I'm going to look at 2017 first.
+Based on the row sums, there are quite a `r nrow(ipdmultiples)` students who returned for multiple years. In order to save my sanity, I'm going to look at 2017 first.
 
-**2017**
+## 2017
 
 ```{r 2017}
 
@@ -105,7 +105,7 @@ cola_before <- cola_before %>% rename("treatment" = "name.y")
 cola_abb2017 <- dplyr::select(cola_before, eid, cola_abbr1)
 ```
 
-**Propensity Score Matching**
+### Propensity Score Matching
 
 ```{r propensity_score}
 
@@ -123,7 +123,7 @@ summary(rr1)
 
 ```
 
-**Entropy Balancing**
+### Entropy Balancing
 
 ```{r message=FALSE, warning=FALSE}
 
@@ -133,6 +133,10 @@ summary(entropy)
 bal.tab(entropy)
 ```
 
+### Matching Diagnostics
+
+* Efficient matches should follow the straight line
+
 ```{r matching_diagnostic}
 
 qqplot(cola_before$cumulative_gpa[rr1$index.control], cola_before$cumulative_gpa[rr1$index.treated])
@@ -141,7 +145,7 @@ abline(coef = c(0, 1), col = 2)
 
 ```
 
-**Showing the Match Balance before and after**
+### Match Balance before and after
 
 ```{r before_after_match, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -149,7 +153,7 @@ abline(coef = c(0, 1), col = 2)
 
 ```
 
-```{r sensitivity}
+```{r sensitivity, eval=FALSE, include=FALSE}
 
 
 #psens(rr1, Gamma=1.7, GammaInc=.05)
@@ -157,9 +161,9 @@ abline(coef = c(0, 1), col = 2)
 
 ```
 
-**Creating the matched dataset for 2017**
+### Creating the matched dataset
 
--   Starts with gpa from Fall 2016
+*   Starts with gpa from Fall 2016
 
 ```{r setup_diffndiff}
 treated_list <- unique(rr1$index.treated)
@@ -202,7 +206,7 @@ df_after$treatment_strength <- ifelse(df$treatment == 1, 2,0)
 df17_two_semesters <- bind_rows(df_before, df_after)
 ```
 
-**Find matches for those that graduated halfway**
+### Find matches for those that graduated halfway
 
 ```{r graduate_spring2017, include=FALSE}
 
@@ -275,7 +279,7 @@ df_after$treatment_strength <- ifelse(df_spring$treatment == 1, 1,0)
 df17_spring <- bind_rows(df_before, df_after)
 ```
 
-**Four semesters**
+### Four semesters
 
 ```{r multiple2017}
 
@@ -359,11 +363,11 @@ df17_four_semesters <- bind_rows(df_before, df_after)
 
 ```
 
-**Three Semesters starting in 2017**
+### Three Semesters starting in 2017
 
--   There was only on that had three semesters, so I removed her (Paula Benavides)
+-   There was only one that had three semesters, so I removed her (Paula Benavides)
 
-**2015**
+## 2015
 
 ```{r 2015}
 
@@ -540,7 +544,7 @@ df_after$treatment_strength <- ifelse(df$treatment == 1, 4,0)
 df15_four_semesters <- bind_rows(df_before, df_after)
 ```
 
-**2016**
+## 2016
 
 ```{r 2016}
 
@@ -782,7 +786,7 @@ df16_four_semesters <- bind_rows(df_before, df_after)
 
 ```
 
-**2018**
+## 2018
 
 ```{r 2018}
 
@@ -1018,7 +1022,7 @@ df18_four_semesters <- bind_rows(df_before, df_after)
 
 ```
 
-**2019**
+## 2019
 
 ```{r 2019}
 
@@ -1183,7 +1187,7 @@ df19_four_semesters <- bind_rows(df_before, df_after)
 
 ```
 
-**DIfference in Difference**
+## DIfference in Difference
 
 ```{r diffndiff}
 
@@ -1210,24 +1214,50 @@ dfall <- bind_rows(df15, df16, df17, df18, df19)
 dfall$weights[dfall$weights == 0] <- 1
 dfall$did <- dfall$time * dfall$treatment
 didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall, weights = weights)
-print("Difference in Difference")
+print("Difference in Difference with Entropy Balancing Weights")
+print("--------------------------------------------------------------------------")
 summary(didreg)
+
+dfall$weights[dfall$weights == 0] <- 1
+dfall$did <- dfall$time * dfall$treatment
+didreg = lm(gpa ~ treatment + treatment_strength + time + did, data = dfall)
+print("Difference in Difference without Entropy Balancing Weights")
+print("--------------------------------------------------------------------------")
+summary(didreg)
+
 
 #Just using treatment
 didreg = lm(gpa ~ treatment + time + did, data = dfall, weights = weights)
-print("Difference in Difference")
+print("Difference in Difference (treatment with weights)")
+print("--------------------------------------------------------------------------")
+summary(didreg)
+
+#Just using treatment
+didreg = lm(gpa ~ treatment + time + did, data = dfall)
+print("Difference in Difference (treatment w/o weights)")
+print("--------------------------------------------------------------------------")
 summary(didreg)
 
 #Just using treatment strength 
 didreg = lm(gpa ~ treatment_strength + time + did, data = dfall, weights = weights)
-print("Difference in Difference")
+print("Difference in Difference (treatment strength with weights")
+print("--------------------------------------------------------------------------")
+summary(didreg)
+
+#Just using treatment strength 
+didreg = lm(gpa ~ treatment_strength + time + did, data = dfall)
+print("Difference in Difference (treatment strength w/o weights)")
+print("--------------------------------------------------------------------------")
 summary(didreg)
 
 #Correlation between treatment and treatment strength 
 print("Correlation between treatment and treatment strength")
+print("--------------------------------------------------------------------------")
 cor(dfall$treatment, dfall$treatment_strength)
 
 ```
+
+## Regression 
 
 ```{r regression}
 
